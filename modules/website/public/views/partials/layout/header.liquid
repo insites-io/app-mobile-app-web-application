@@ -1,0 +1,238 @@
+---
+metadata: {
+    partial_name: 'Website | Layout | Header'
+}
+---
+{% comment %} ? GET GLOBAL CONTENT {% endcomment %}
+{%- include "modules/insites_cms/globals" -%}
+{%- assign global = context.exports.global -%}
+{% comment %} NOTE: Set Global Content if empty {% endcomment %}
+{% if global.company_logo == nil or global.company_logo contains "client-logo.png" %}
+  {% assign company_logo = 'modules/website/images/ins-marketplace.png' | asset_url %}
+  {% assign alternate_company_logo = 'modules/website/images/ins-marketplace-alt.png' | asset_url %}
+{% else %}
+  {% assign company_logo = global.company_logo %}
+  {% assign alternate_company_logo = global.alternate_company_logo %}
+{% endif %}
+
+{% comment %} Header class {% endcomment %}
+{%  liquid      
+    if dark != true
+      assign headerClass = '' | split: ','
+      assign headerClass = headerClass | array_add: 'light-header'
+      if border == true
+        assign headerClass = headerClass | array_add: 'border-bottom-nav'
+      endif
+      assign headerClass = headerClass | join: ' ' 
+    else 
+      assign headerClass = 'no-light-header'
+    endif
+%}
+<header id="main-header" class="{{headerClass}}">  
+
+  <div id="mainHeaderWrapper" class="wrapper">
+    <div class=" grid-container grid-x align-middle">
+      <div class="large-1 medium-3 small-5 cell">
+        <a href="/">
+          {% comment %} ? FETCHED FROM IIA -> CMS -> GLOBALS {% endcomment %}
+          {% if dark == blank %} 
+            <img class="logo" src="{{ company_logo }}" alt="Logo" height="56" width="119">
+          {% else %}
+            <img class="logo" src="{{ alternate_company_logo }}" alt="Logo" height="56" width="119">
+          {% endif %}
+        </a>
+      </div>
+
+      {%- assign menus = '[]' | parse_json -%}
+      {%- graphql get_menu = 'modules/website/menu/get_parent_menu' | dig: 'items', 'results'-%}
+
+      {% assign menu_data = get_menu | parse_json %}
+    
+      {% for menu_item in menu_data %}
+        {%- assign parent = '{}' | parse_json -%}
+        {%- assign parent = parent | add_hash_key: "label", menu_item.label -%}
+        {%- assign parent = parent | add_hash_key: "slug", menu_item.slug -%}
+
+        {%- graphql get_child_menu = 'modules/website/menu/get_child_menu', parent_id: menu_item.id | dig: 'items', 'results' -%}
+        {%- assign parent = parent | add_hash_key: "child", get_child_menu -%}
+        {%- assign menus = menus | add_to_array: parent -%}
+      {% endfor %}
+
+      {%- graphql get_features = 'modules/website/features/get_features' -%}
+      {%- assign features =  get_features | dig: 'items', 'results'  -%}
+
+      {% comment %} Get Ecommerce Cart Count {% endcomment %}
+      {% if context.constants.ecommerce_addon == 'true' %}        
+        {%  liquid
+              function user_uuid = 'modules/ecommerce/user/get_user_uuid'              
+              assign cart_items = null                         
+              if user_uuid
+                graphql cart_items = 'modules/ecommerce/carts/get_cart', contact_uuid: user_uuid | dig: 'items','results' | first | dig: 'cart_items'
+              endif
+        %}
+      {% endif %}
+
+      <div class="large-11 medium-3 small-8 cell hide-nav-medium">
+        <div class="navlinks">
+
+          {% comment %} Ecommerce Addon {% endcomment %}
+          {% if context.constants.ecommerce_addon == 'true' %}
+            <ins-button id="mega-menu-btn" label="Shop" icon-right="icon-angle-down"></ins-button>
+          {% endif %}
+
+          {% comment %} Events Addon {% endcomment %}
+          {% if context.constants.events_addon == 'true' %}
+            <ins-dropdown label="Events">
+              <ins-dropdown-item
+                link="/upcoming-events"
+                label="Upcoming events">
+              </ins-dropdown-item> 
+              <ins-dropdown-item
+                link="/previous-events"
+                label="Previous events">
+              </ins-dropdown-item> 
+            </ins-dropdown>
+          {% endif %}
+
+          {% comment %} Database driven menu {% endcomment %}
+          {% for menu in menus %}
+            {%- if menu.slug == "features" -%}
+              <a class="nav-dropdown-link feature-nav-link" href="/{{menu.slug}}">
+                <ins-dropdown label="{{menu.label}}">
+                  {% for item in features %}
+                    <ins-dropdown-item
+                      link="/{{menu.slug}}/{{ item.slug }}"
+                      label="{{ item.card_title }}">
+                    </ins-dropdown-item>
+                  {% endfor %} 
+                </ins-dropdown>
+              </a>
+            {% else %}
+              <a href="/{{menu.slug}}">
+                {{menu.label}}
+              </a>
+            {% endif %}
+          {% endfor %}
+
+          {% comment %} Eccomerce Cart Icon {% endcomment %}          
+          {% if context.constants.ecommerce_addon == 'true' %}      
+            <a role="button" onclick="openDrawer()" class="cart-icon">
+              <i class="icon-shopping-cart"></i>
+              <span class="cart-count 
+                {% if cart_items == null or cart_items.size == 0 %}hide
+                {% elsif cart_items.size > 9 %}two-digits-count
+                {% endif %}">{{ cart_items.size | default: 0 }}</span>
+            </a>    
+            <span class="vertical-line"></span>            
+          {% endif %}
+      
+          {% comment %} Logged user dropdown links {% endcomment %}
+          {% function has_profile = "modules/website/layout/check_if_user_has_profile" %}
+          {% if has_profile %}        
+            {%- graphql user_with_token = 'modules/portal/account/get_user_with_password_token', email: context.current_user.email | dig: 'users','results' | first -%}
+                            
+            <ins-dropdown 
+              label="{{ context.current_user.first_name }} {{ context.current_user.last_name }}"
+              class="profileNav">
+
+              <ins-dropdown-item
+                link="/my-details"
+                label="My details">
+              </ins-dropdown-item>
+
+              {% if context.constants.ecommerce_addon == 'true' %}
+              <ins-dropdown-item
+                link="/order-history"
+                label="Order history">
+              </ins-dropdown-item>
+              {% endif %}
+
+              {% if context.constants.events_addon == 'true' %}
+                <ins-dropdown-item
+                  link="/itinerary-upcoming"
+                  label="My events">
+                </ins-dropdown-item>
+              {% endif %}
+            
+              <ins-dropdown-item
+                link="/generate-password-token?email={{ user_with_token.email | url_encode }}"
+                label="Change password">
+              </ins-dropdown-item>
+
+              <ins-dropdown-item link="" label="">
+                {% include_form 'modules/portal/sign_out' %}
+              </ins-dropdown-item>
+
+            </ins-dropdown>
+          {% else %}
+            <a class="nav-sign-in-btn" href="/sign-in">Sign in</a>
+            <a class="nav-register-btn" href="/create-account">Create account</a>
+          {% endif %} 
+          </div>
+      </div>
+
+      
+
+      <div class="mobile-menu-toggle large-0 medium-3 small-5 cell ">
+
+        {% comment %} Sign in {% endcomment %}
+        {% if context.current_user == blank %}
+          <a class="nav-sign-in-btn" href="/sign-in">Sign in</a>
+        {% endif %}
+
+        {% comment %} Eccomerce Cart Icon {% endcomment %}          
+        {% if context.constants.ecommerce_addon == 'true' %}      
+          <a role="button" onclick="openDrawer()" class="cart-icon">
+            <i class="icon-shopping-cart"></i>
+            <span class="cart-count 
+              {% if cart_items == null or cart_items.size == 0 %}hide
+              {% elsif cart_items.size > 9 %}two-digits-count
+              {% endif %}">{{ cart_items.size | default: 0 }}</span>
+          </a>       
+        {% endif %}
+
+        {% comment %} Mobile Menu {% endcomment %}
+        <div id="mobile-menu-btn" class="icon-menu-1"></div>
+      </div>
+
+      
+    </div>
+  </div>
+</header>
+
+{% if context.constants.ecommerce_addon == 'true' %}
+  {% include 'modules/ecommerce/menu/mega_menu' %}
+{% endif %}
+
+{% if context.constants.ecommerce_addon == 'true' %}
+  <script src="{{ 'modules/ecommerce/scripts/mega-menu-close.js' | asset_url }}"></script>
+<script>
+  const guestUserEl = document.getElementById('guest-user-flag'); 
+
+  if (guestUserEl && window.localStorage) {
+    const guestUserFlag = guestUserEl.value
+
+    if (guestUserFlag === 'true') {
+      // Get Cart Count from LocalStorage
+      const guest_cart = localStorage.getItem('carts');
+
+      if (guest_cart) {
+        const parsedCart = JSON.parse(guest_cart);
+        const cartCount = parsedCart.length;
+
+        // Update the cart count dynamically in the HTML
+        const cartCountElement = document.getElementById('cart-count');
+        if (cartCountElement) {
+          cartCountElement.innerHTML = cartCount; // Update the displayed cart count
+          if (cartCount === 0) {
+            cartCountElement.classList.add('hide'); 
+          } else {
+            cartCountElement.classList.remove('hide'); 
+          }
+        }
+      }
+    } 
+  }  
+</script>
+{% endif %}
+

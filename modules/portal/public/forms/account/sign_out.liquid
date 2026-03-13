@@ -1,0 +1,18 @@
+---
+name: sign_out
+redirect_to: /sign-out
+resource: Session
+callback_actions: >
+  {% include 'modules/portal/account/clear_session' %}
+  {% if context.constants.ecommerce_addon == 'true' %}
+    {% include 'modules/ecommerce/checkout/clear_session' %}
+    {% include 'modules/ecommerce/user/clease_sessions' %}
+  {% endif %}
+  {% if context.constants.events_addon == 'true' %}
+    {% include 'modules/events/purchase_ticket/clear_ticket_purchase_sessions' %}
+  {% endif %}
+---
+
+{% form method: 'delete' %}
+  <ins-button class="signOutCustom" label="Sign out" type="submit" size="normal"></ins-button>
+{% endform %}

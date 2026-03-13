@@ -1,0 +1,145 @@
+---
+slug: my-company-details
+layout: modules/portal/portal_form
+searchable: false
+max_deep_level: 1
+metadata: {
+    "status": "published",
+    "page_name": "My Company Details | Insites Portal",
+    "open_graph:url": "{{ context.exports.global.company_url | strip }}",
+    "open_graph:type": "",
+    "open_graph:image": "",
+    "open_graph:title": "",
+    "open_graph:description": "",
+    "open_graph:site_name": "{{ context.exports.global.company_name | strip }}",
+    "meta_title": "",
+    "page_title": "My Company Details | Insites Portal",
+    "meta_description": "",
+    "canonical_url": "",
+    "is_visible_to_search_engines": false,
+    "sitemap_enabled": false,
+    "sitemap_priority": "1.0",## primary order (DESC)
+    "sitemap_order": "0", ## secondary order (ASC)
+    "sitemap_changefreq": "never",
+    "heading": ""
+}
+authorization_policies:
+  - modules/portal/is_user_logged_in
+---
+    
+{%- graphql user = 'modules/portal/account/get_current_user' | dig: 'current_user' -%}
+{% assign company_uuid = user | dig: 'crm_contact' | first | dig: 'company_uuid' %}
+{% function company = "crm/controller/companies/get", uuid: company_uuid %}
+{% assign default_address_uuid = company.default_address.uuid %}
+
+
+{% comment %} Get the Default Address or the First Address of the Company {% endcomment %}
+{% if default_address_uuid and default_address_uuid != '' %}
+
+  {% comment %} Default Address {% endcomment %}
+  {% function company_address = "crm/controller/addresses/get", type: "company", uuid: default_address_uuid %}
+
+{% elsif company_uuid and company_uuid != '' %}
+
+  {% comment %} First Address of the Company {% endcomment %}
+  {% parse_json address_params %}
+  {
+    "page": "1",
+    "size": "1",
+    "keyword": "{{ company_uuid }}",
+    "search_by": "company.uuid"
+  }
+  {% endparse_json %}
+  {% function company_address = "crm/controller/addresses/list", type: "company", params: address_params  %}
+  {% assign company_address = company_address | dig: "results" | first  %}
+
+{% endif %}  
+  
+
+{% comment %} Assign the Address as the Default Address of the Company {% endcomment %}
+{% assign company = company | add_hash_key: "default_address", company_address %}
+
+
+{% comment %} Company Details Form {% endcomment %}
+{% if company.id and company.id != '' %} 
+  {%- include_form 'modules/portal/my_company_details', id: company.id, uuid: company.uuid, data: company -%}
+{% else %}
+  {% assign uuid = '' | uuid %}
+  {%- include_form 'modules/portal/my_company_details', uuid: uuid, data: company -%}
+{% endif %}
+
+
+<script>
+  let submitBtn = document.getElementById("submit-btn");
+  let form = document.getElementById("my-company-details-form");
+  let company_email = document.getElementById("email-1");
+
+  let companyMobileFields = {
+    inputTel: document.getElementById('company-mobile-phone'),
+    phone_number: document.getElementById('company_mobile_phone_number'),
+    country_code: document.getElementById('company_mobile_phone_country_code')
+  }
+
+   async function validateMyCompanyDetails(event) {
+    event.preventDefault();
+    submitBtn.loading = true;
+
+    // VALIDATE EMAIL
+    var is_email_valid = true
+    var requiredEmail = document.getElementById("CompanyEmailRequired");
+    var emailInvalid = document.getElementById("CompanyEmailInvalid")
+    requiredEmail.classList.add('is_hidden');
+    emailInvalid.classList.add('is_hidden');
+
+    if(company_email.value == '') {
+        requiredEmail.classList.add('is_visible');
+        requiredEmail.classList.remove('is_hidden');
+    } else {
+        is_email_valid = isValidEmail(company_email.value); // no "this."
+        if(is_email_valid == false){ 
+            emailInvalid.classList.add('is_visible');
+            emailInvalid.classList.remove('is_hidden');
+        }
+    }
+
+    function isValidEmail(email) {
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return re.test(email);
+    }
+
+
+    if (await App.validation.validateForm(form)) {
+      let values = await companyMobileFields.inputTel.getValues();
+      companyMobileFields.country_code.value = values.country_code;
+      companyMobileFields.phone_number.value = values.phone_number;
+      form.submit();
+      submitBtn.loading = false;
+    } else {
+      submitBtn.loading = false;
+      return false;
+    }
+   }
+ 
+
+{% if context.flash and context.flash.notice == "Success-Company-Details" -%}
+setTimeout(() => {
+    App.events.notyf('success', "Company details updated.");
+}, 200);
+{% endif -%}
+
+{% if context.flash and context.flash.alert == "Error-Company-Details" -%}
+setTimeout(() => {
+    App.events.notyf('error', "Error updating company details.");
+}, 200);
+{% endif -%}
+</script>
+
+{% comment %} Search Address Script {% endcomment %}
+{% include 'modules/website/layout/googlemaps' %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.min.js"></script>
+{%- if context.environment == "staging" -%}
+  <script src="{{ 'modules/portal/scripts/address-lookup.js' | asset_url }}"></script>
+{%- else -%}
+  <script src="{{ 'modules/portal/scripts/address-lookup.min.js' | asset_url }}"></script>
+{%- endif -%}

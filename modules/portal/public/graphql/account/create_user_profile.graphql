@@ -1,0 +1,31 @@
+mutation create_user_profile(
+  $id: ID!
+  $token: String!
+  $is_enabled: Boolean
+  $primary_account_holder: Boolean
+  $invitation_status: String
+  $permission_level: String
+) {
+  user_update(
+    id: $id
+    user: {
+      profiles: [
+        {
+          name: "modules/portal/portal",
+          values: {
+            properties: [
+              { name: "verification_token", value: $token }
+              { name: "invitation_status", value: $invitation_status }
+              { name: "is_enabled", value_boolean: $is_enabled }
+              { name: "primary_account_holder", value_boolean: $primary_account_holder }
+              { name: "permission_level", value: $permission_level }
+            ]
+          }
+        }
+      ]
+    }
+  ) {
+    id
+    properties
+  }
+}

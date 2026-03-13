@@ -1,0 +1,15 @@
+---
+metadata: {
+    partial_name: 'Website | Layout | Googlemaps'
+}
+---
+
+{% function data = "crm/controller/google_maps/get" %}
+{%- assign key = data.key -%}
+
+<script>
+    async function googleMapCallback(){
+        //Callback is required but do nothing here
+    }
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key={{key}}&libraries=places&v=3.exp&loading=async&callback=googleMapCallback"></script>    

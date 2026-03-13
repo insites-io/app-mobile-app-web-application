@@ -1,0 +1,334 @@
+---
+metadata: {
+    page_slug: "news",
+    page_title: "News | Insites",
+    layout: "list"
+}
+---
+{% comment %} ? THIS IS TO SET DEFAULT VALUES FOR NEWS IMAGE {% endcomment %}
+{% comment %} ? THIS BLOCK OF CODE UNDER THIS COMMENT CAN BE DELETED ONCE IMAGES ON NEWS DATABASE IS POPULATED BY THE USER{% endcomment %}
+{% parse_json news_list %}
+[
+    {
+        "image": "{{ 'modules/website/images/news/the-beginners-guide-to-website-development.webp' | asset_url }}",
+        "slug": "the-beginners-guide-to-website-development"
+    },
+    {
+        "image": "{{ 'modules/website/images/news/advantages-of-working-remotely.webp' | asset_url }}",
+        "slug": "advantages-of-working-remotely"
+    },
+    {
+        "image": "{{ 'modules/website/images/news/how-to-reach-customers-everywhere-with-mobile-seo.webp' | asset_url }}",
+        "slug": "how-to-reach-customers-everywhere-with-mobile-seo"
+    },
+    {
+        "image": "{{ 'modules/website/images/news/elevate-your-brand-with-expert-design.webp' | asset_url }}",
+        "slug": "elevate-your-brand-with-expert-design"
+    },
+    {
+        "image": "{{ 'modules/website/images/news/design-as-storytelling-crafting-narratives-through-visuals.webp' | asset_url }}",
+        "slug": "design-as-storytelling-crafting-narratives-through-visuals"
+    },
+    {
+        "image": "{{ 'modules/website/images/news/8-mobile-ux-best-practices-every-designer-should-consider.webp' | asset_url }}",
+        "slug": "8-mobile-ux-best-practices-every-designer-should-consider"
+    },
+    {
+        "image": "{{ 'modules/website/images/news/building-empathy-in-the-digital-age-can-ai-understand-human-emotion.jpg' | asset_url }}",
+        "slug": "building-empathy-in-the-digital-age-can-ai-understand-human-emotion"
+    }
+]
+{% endparse_json %}
+{% comment %} ? DELETE UNTIL THIS LINE OF CODE ONCE NEWS DATABASE IS POPULATED {% endcomment %}
+
+{%  liquid         
+    assign page_num = context.params.page | default: 1 | plus: 0
+    assign per_page = context.params.per_page | default: 6 | plus: 0
+    assign keyword = context.params.search | default: ""
+    assign tag = context.params.tag | default: ""
+    assign sort =  context.params.sort | default: "DESC"
+    assign field = "" | default: "published_date" 
+    if sort == "A-Z"
+        assign field = "title" 
+        assign sort = "ASC"
+    endif
+
+    if sort == "Z-A"
+        assign field = "title" 
+        assign sort = "DESC"
+    endif
+
+    if tag == "All"
+        assign tag = ""
+    endif
+
+%}
+
+{%- graphql get_news = 'modules/website/news/get_news', page: page_num, size: per_page, keyword: keyword, tag: tag, sort: sort, field: field -%}
+{%- assign res_news = get_news | dig: 'items', 'results' -%}
+
+{% assign description = "Stay updated with the latest news, insights, and updates. Explore articles on industry trends, company announcements, and expert opinions—all in one place." %}
+{% include 'modules/website/content/hero_title', description: description %} 
+
+{% comment %} ? Tag {% endcomment %}
+{%- graphql get_tag = 'modules/website/news/get_tag' | dig: 'items', 'results' -%}
+{% assign data = get_tag | uniq | parse_json | sort: 'tag' %}
+{% assign tags = data | map: "tag" %}
+
+<div class="wrapper">
+    <div class="news-filter-container">
+        <div class="grid-container">
+            <div class="grid-x gutter-medium grid-padding-x grid-padding-y">
+                <div class="large-8 medium-12 small-12 cell filter-container-cell">
+                    <ins-filter id="news-filter" label="Filter by:">
+                        <ins-filter-item
+                            name="Tag"
+                            options='["All"{% for tag in tags %}, "{{ tag }}"{% endfor %}]'
+                            selected="{{ context.params.tag }}">
+                        </ins-filter-item>
+                        <ins-filter-item
+                            name="Sort by"
+                            options='["Newest First", "Oldest first", "Alphabetical (A-Z)","Alphabetical (Z-A)"]'
+                            {% liquid 
+                                if context.params.sort == "DESC"
+                                    assign sort_val = "Newest First"
+                                endif
+
+                                if context.params.sort == "ASC"
+                                    assign sort_val  = "Oldest first"
+                                endif
+
+                                if context.params.sort == 'A-Z'
+                                    assign sort_val = "Alphabetical (A-Z)"
+                                endif
+
+                                if context.params.sort == 'Z-A'
+                                    assign sort_val = "Alphabetical (Z-A)" 
+                                endif             
+                            %}
+                            selected="{{ sort_val }}">
+                        </ins-filter-item>
+                    </ins-filter>
+                </div>
+                <div class="large-4 medium-12 small-12 cell search-container-cell">
+                    <div class="">
+                        <ins-input                 
+                            id="search-input"
+                            class="search-award search-bars"
+                            placeholder="Search news"
+                            icon-event
+                            icon="icon-search-1"
+                            error-message="Search Keyword cannot be blank"
+                            value="{{ context.params.search }}">
+                        </ins-input>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="spacer xxxx-large"></div>
+
+{% if get_news.items.total_entries == 0 %}
+    <div class="grid-container">
+        <div class="grid-x align-center">
+            {% if context.params.search != blank %}
+                <p class="subHeading">No results found for keyword "<strong>{{ keyword  }}</strong>"</p>
+            {% else %}
+                <p class="subHeading">No results found</p>    
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+
+    <div class="grid-container">     
+        <section class="news-content">
+            <div class="team-list grid-x gutter-medium grid-padding-x grid-padding-y">
+                {% for item in res_news %}
+                    <div class="large-4 medium-6 small-12 cell news-cards">
+                        <a onclick="goToNewsDetail('{{ item.slug }}')" class="news-main-link-container">
+                            <div class="card"> 
+                                <div class="newsImageContainer">
+                                    {% if item.list_view_image.url %}
+                                        <img width="500" height="500" alt="image" src="{{ item.list_view_image.url }}">
+                                    {% else %}
+                                        {% comment %} ? SETTING DEFAULT IMAGE {% endcomment %}
+                                        {% for news in news_list %}
+                                            {% if item.slug == news.slug %}
+                                                <img width="500" height="500" alt="image" src="{{ news.image }}">
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                                <div class="spacer large"></div>
+                                <div class="news-author">
+                                    {% if item.author != blank %}
+                                        <p class="newsSubheading">Published on {{ item.published_date | date: "%b %d, %Y" }} by {{ item.author }}</p>
+                                    {% else %}
+                                        <p class="newsSubheading">Published on {{ item.published_date | date: "%b %d, %Y" }}</p>
+                                    {% endif %}                  
+                                </div>
+                                <div class="newsContentContainer">
+                                    <div class="news-content">
+                                        <div class="spacer x-small"></div>
+                                            <div class="newsTitle">
+                                                <h5>{{ item.title }}</h5>
+                                            </div>
+                                        <div class="spacer x-small"></div>
+                                        <div class="description">
+                                            <p class="subHeading p-two-line">{{ item.list_view_text }}</p>
+                                        </div>
+                                        <div class="tagButton">
+                                            <ins-tag 
+                                                label="{{ item.tag }}" 
+                                                icon="icon-star" 
+                                                class="news-tag"
+                                                {% if item.tag == 'Web Development'%}
+                                                    color="green"
+                                                {% endif %}
+                                                {% if item.tag == 'SEO'%}
+                                                    color="red"
+                                                {% endif %}
+                                                {% if item.tag == 'Design'%}
+                                                    color="blue"
+                                                {% endif %}
+                                                >
+                                            </ins-tag>
+                                        </div> 
+                                    </div>
+                                    <div class="news-link">
+                                        <i class="icon-arrow-up-right"></i> 
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                {% endfor %}	
+            </div>
+        </section>
+        
+        <div class="spacer xxxx-large"></div>
+        <ins-table no-wrap
+        static-table
+        class="for-pagination-only" 
+        id="insBaseTable"
+        without-search>    
+        </ins-table>
+    </div>
+</div>
+
+<div class="spacer xxxx-large"></div>
+<script>
+    const insBaseTable = document.getElementById('insBaseTable');
+    const searchKey = document.getElementById('search-input');
+    const filterEl = document.getElementById('news-filter');
+
+    if (insBaseTable) {
+        insBaseTable.pageSizeOptions = [6, 15, 30];
+        insBaseTable.totalCount = {{ get_news.items.total_entries }};
+        insBaseTable.pageNumber = {{ page_num }};
+        insBaseTable.pageSize = {{ per_page }};
+
+        setTimeout(() => {
+            const paginationLabel = insBaseTable.querySelector(".ibt-table-wrap__pagination > span");
+            if (paginationLabel) paginationLabel.innerHTML = 'Items per page';
+        }, 600);
+
+        insBaseTable.addEventListener('insPaginationChange', handlePaginationChange);
+    }
+
+    function handlePaginationChange(event) {
+        const { pageNumber, pageSize } = event.detail;
+        updateUrlParams({ page: pageNumber, per_page: pageSize });
+    }
+
+    if (searchKey) {
+        searchKey.addEventListener('insIconClick', handleSearch);
+        searchKey.addEventListener('insInput', e => {
+            if (e.detail.keyCode === 13) handleSearch();
+        });
+        searchKey.addEventListener('insValueChange', () => { 
+            
+        });
+    }
+
+    function handleSearch() {
+        const value = searchKey.value.trim();
+        toggleInputError(false);
+        updateUrlParams({ search: value, page: 1 }); 
+    }
+
+    function toggleInputError(hasError) {
+        if (hasError) {
+            searchKey.setAttribute("has-error", "");
+        } else {
+            searchKey.removeAttribute("has-error");
+        }
+    }
+
+    if (filterEl) {
+        filterEl.addEventListener('insFilterApply', (event) => {
+            const { Tag, "Sort by": sortLabel } = event.detail;
+            const updatedParams = {};
+
+            if (Tag && Tag !== 'all') {
+                updatedParams.tag = Tag;
+            } else {
+                updatedParams.tag = null; 
+            }
+
+            if (sortLabel) {
+                let sort;
+                switch (sortLabel) {
+                    case 'Newest First':
+                        sort = 'DESC'; break;
+                    case 'Oldest first':
+                        sort = 'ASC'; break;
+                    case 'Alphabetical (A-Z)':
+                        sort = 'A-Z'; break;
+                    case 'Alphabetical (Z-A)':
+                        sort = 'Z-A'; break;
+                }
+                updatedParams.sort = sort;
+            }
+
+            updatedParams.page = 1; 
+            updateUrlParams(updatedParams);
+        });
+    }
+
+    function updateUrlParams(params) {
+        const url = new URL(window.location.href);
+
+        Object.entries(params).forEach(([key, value]) => {
+            if (value === null || value === undefined) {
+                url.searchParams.delete(key);
+            } else {
+                url.searchParams.set(key, value);
+            }
+        });
+
+        window.location.href = url.toString();
+    }
+
+    function goToNewsDetail(slug) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const filters = {};
+
+        const tag = urlParams.get('tag');
+        const search = urlParams.get('search');
+        const sort = urlParams.get('sort');
+        const page = urlParams.get('page');
+        const per_page = urlParams.get('per_page');
+
+        if (tag) filters.tag = tag;
+        if (search) filters.search = search;
+        if (sort) filters.sort = sort;
+        if (page) filters.page = page;
+        if (per_page) filters.per_page = per_page;
+
+        sessionStorage.setItem('newsFilters', JSON.stringify(filters));
+
+        window.location.href = `/news/${slug}`;
+    }
+</script>

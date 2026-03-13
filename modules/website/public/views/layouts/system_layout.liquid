@@ -1,0 +1,38 @@
+---
+metadata: {
+    layout_name: system_layout
+}
+---
+{%- comment -%} Used by the fragment cache in the layout {%- endcomment -%}
+    {%- include "modules/website/cache/layout_fragment_cache_key" -%}
+
+<!doctype html>
+<html class="no-js" lang="en">
+    <head>
+        {%- capture head_key -%} {{ context.exports.layout_cache_key.cache_key | append: "-head" }} {%- endcapture -%}
+        {%- cache head_key -%}
+            {% include 'modules/website/layout/head' %}
+        {%- endcache -%}
+    </head>
+    <body class="system-page flex-container flex-dir-column">
+        <div class="content-container">
+            {% include 'modules/website/layout/header' %} 
+            {% include 'modules/website/layout/header_mobile' %}
+
+            {% comment %} ? For ecommerce cart drawer {% endcomment %}
+            {% if context.constants.ecommerce_addon == 'true' %}
+                {% include 'modules/ecommerce/carts/cart_drawer' %}
+            {% endif %}
+
+            <div class="system-content">      
+                {{ content_for_layout }}
+            </div> 
+        </div>
+        
+        {%- capture foot_key -%} {{ context.exports.layout_cache_key.cache_key | append: "-footer_section"}} {%- endcapture -%}
+        {%- cache foot_key -%} 
+            {% include 'modules/website/layout/footer' %}
+        {%- endcache -%}
+    </body>
+</html>
+

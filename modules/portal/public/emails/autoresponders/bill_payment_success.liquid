@@ -1,0 +1,605 @@
+---
+name: bill_payment_success
+to: '{{ data.customer_info.email }}'
+delay: 0
+enabled: true
+trigger_condition: true
+from: >
+    {%- include 'modules/portal/emails/autoresponder_from' -%}
+reply_to: >
+    {%- include 'modules/portal/emails/autoresponder_reply_to' -%}
+cc:
+bcc:
+subject: Bill payment successful
+layout: modules/insites_core/insites_external_email_layout
+metadata: {
+    email_name: "Auto Responder | Bill Payment Success"
+}
+---
+
+{% graphql get_order = 'modules/portal/orders/get_order', id: data.order_id | dig: 'items','results' | first
+%}
+
+{% comment %} Compute amounts {% endcomment %}
+{%- liquid
+    function computed = "modules/portal/pay_bills/compute_amounts", total_amount: get_order.properties.total_amount, total_tax_amount: get_order.properties.total_tax_amount, subtotal_amount: get_order.properties.subtotal_amount
+
+    assign amount_due = computed.total_amount
+    if status == 'succeeded'
+        assign amount_due = 0.0
+    endif
+-%}
+
+{%- assign subTotal = computed.amount | advanced_format: '%.2f' -%}
+{%- assign ccSurcharge = computed.cc_surcharge | advanced_format: '%.2f' -%}
+{%- assign gst = computed.tax | default: 0.00 -%}
+{%- assign totalAmount = computed.total_amount | advanced_format: '%.2f' -%}
+
+{%- assign subTotal = subTotal | pricify -%}
+{%- assign ccSurcharge = ccSurcharge | pricify -%}
+{%- assign gst = gst | pricify -%}
+{%- assign totalAmount  = totalAmount | pricify -%}
+
+{%- unless subTotal contains '.' -%}
+    {%- assign subTotal = subTotal | append: '.00' -%}
+{%- endunless -%}
+
+{%- unless ccSurcharge contains '.' -%}
+    {%- assign ccSurcharge = ccSurcharge | append: '.00' -%}
+{%- endunless -%}
+
+{%- unless gst contains '.' -%}
+    {%- assign gst = gst | append: '.00' -%}
+{%- endunless -%}
+
+{%- unless totalAmount contains '.' -%}
+    {%- assign totalAmount = totalAmount | append: '.00' -%}
+{%- endunless -%}
+
+  {% comment %} <!-- Spacer --> {% endcomment %}
+  <table class="module" role="module" data-type="spacer" border="0" cellpadding="0"
+    cellspacing="0" width="100%" style="table-layout: fixed;"
+    data-muid="a15f4ddd-d611-4626-945c-62c1a481f19f">
+    <tbody>
+      <tr>
+        <td style="padding:0px 0px 56px 0px;" role="module-content" bgcolor="">
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+<table class="module" role="module" data-type="text" border="0" cellpadding="0"
+  cellspacing="0" width="100%" style="table-layout: fixed;"
+  data-muid="ae3b5e25-e601-4be7-8e69-e21f7125e6e7" data-mc-module-version="2019-10-22">
+  <tbody>
+    <tr>
+      <td style="padding:0px 40px 40px 40px; line-height:24px; text-align:inherit;"
+        height="100%" valign="top" bgcolor="" role="module-content">
+        <div>
+          <div style="font-family: inherit; text-align: left"><span
+              style="font-size: 32px;font-weight: 600;color:#0D0D0D;"><strong>Payment Successful</strong></span>
+          </div>
+          <div></div>
+        </div>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+{% comment %} <!-- Content text --> {% endcomment %}
+<table class="module" role="module" data-type="text" border="0" cellpadding="0"
+  cellspacing="0" width="100%" style="table-layout: fixed;"
+  data-muid="c91a48dd-cef4-4985-9a78-d3e751a003dc" data-mc-module-version="2019-10-22">
+  <tbody>
+    <tr>
+      <td style="padding:0px 40px 56px 40px; line-height:24px; text-align:inherit;"
+        height="100%" valign="top" bgcolor="" role="module-content">
+        <div>
+          <div style="font-family: inherit; text-align: left">
+            <span style="white-space: pre-wrap;font-size: 16px;font-style: normal;font-weight: 400;color:#525252">Your payment has been processed successfully.</span>
+            <div style="font-family: inherit; text-align: left;padding-bottom:56px"></div>
+            <hr style="border: none; border-top: 1px solid #DFDFDF; margin:0px">
+          </div>
+          <div></div>
+        </div>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+{% comment %} <!-- Order number --> {% endcomment %}
+<table class="module" role="module" data-type="text" border="0" cellpadding="0"
+  cellspacing="0" width="100%" style="table-layout: fixed;"
+  data-muid="b13844a0-c587-4880-afda-09c68ec00c01.1.1"
+  data-mc-module-version="2019-10-22">
+  <tbody>
+    <tr>
+      <td style="padding:0px 40px 40px 40px; line-height:20px; text-align:inherit;"
+        height="100%" valign="top" bgcolor="" role="module-content">
+        <div>
+          <div style="font-family: inherit; text-align: left">
+            <span style="white-space: pre-wrap;font-size: 24px;font-style: normal;font-weight: 600;color: #0d0d0d"><strong>Reference: {{ get_order.properties.order_reference }}</strong></span>
+          </div>
+          <div></div>
+        </div>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+{% comment %} <!-- Bill Details --> {% endcomment %}
+<table class="module" role="module" data-type="text" border="0" cellpadding="0"
+  cellspacing="0" width="100%" style="table-layout: fixed;"
+  data-muid="676a1c91-0c6a-4466-afe0-615c8939776e" data-mc-module-version="2019-10-22">
+  <tbody>
+    <tr>
+      <td style="padding:0px 40px 32px 40px; line-height:24px; text-align:inherit;"
+        height="100%" valign="top" bgcolor="" role="module-content">
+        <div>
+          <div style="font-family: inherit; text-align: left">
+            <span style="white-space: pre-wrap; font-size: 16px;font-style: normal;font-weight: 600;color:#0D0D0D">Bill Details</span>
+          </div>
+          <div></div>
+        </div>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+{% comment %} <!-- Name --> {% endcomment %}
+<table border="0" cellpadding="0" cellspacing="0" align="center" width="100%"
+  role="module" data-type="columns" style="padding:0px 40px 16px 40px;" bgcolor=""
+  data-distribution="1,1">
+  <tbody>
+    <tr role="module-content">
+      <td height="100%" valign="top">
+        <table width="250"
+          style="width:250px; border-spacing:0; border-collapse:collapse; margin:0px 16px 0px 0px;"
+          cellpadding="0" cellspacing="0" align="left" border="0" bgcolor=""
+          class="column column-0">
+          <tbody>
+            <tr>
+              <td style="padding:0px;margin:0px;border-spacing:0;">
+                <table class="module" role="module" data-type="text" border="0"
+                  cellpadding="0" cellspacing="0" width="100%"
+                  style="table-layout: fixed;"
+                  data-muid="4bcbeca9-ae9c-4737-97df-52f67a0529c9.2.1.1.4.2"
+                  data-mc-module-version="2019-10-22">
+                  <tbody>
+                    <tr>
+                      <td
+                        style="padding:0px 0px 0px 0px; line-height:24px; text-align:inherit;"
+                        height="100%" valign="top" bgcolor="" role="module-content">
+                        <div>
+                          <div style="font-family: inherit; text-align: left"><span
+                              style="white-space: pre-wrap;font-size: 14px;font-style: normal;font-weight: 600;color:#0D0D0D"><strong>Name</strong></span>
+                          </div>
+                          <div style="font-family: inherit; text-align: left;padding-bottom:8px"></div>
+                          <div style="font-family: inherit; text-align: left">
+                            <span style="white-space: pre-wrap;font-size: 14px;font-style: normal;color:#525252">{{ data.customer_info.first_name | append: ' ' | append: data.customer_info.last_name }}</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+{% comment %} <!-- Email --> {% endcomment %}
+<table border="0" cellpadding="0" cellspacing="0" align="center" width="100%"
+  role="module" data-type="columns" style="padding:0px 40px 40px 40px;" bgcolor=""
+  data-distribution="1,1">
+  <tbody>
+    <tr role="module-content">
+      <td height="100%" valign="top">
+        <table width="250"
+          style="width:250px; border-spacing:0; border-collapse:collapse; margin:0px 16px 0px 0px;"
+          cellpadding="0" cellspacing="0" align="left" border="0" bgcolor=""
+          class="column column-0">
+          <tbody>
+            <tr>
+              <td style="padding:0px;margin:0px;border-spacing:0;">
+                <table class="module" role="module" data-type="text" border="0"
+                  cellpadding="0" cellspacing="0" width="100%"
+                  style="table-layout: fixed;"
+                  data-muid="4bcbeca9-ae9c-4737-97df-52f67a0529c9.2.1.1.4.2"
+                  data-mc-module-version="2019-10-22">
+                  <tbody>
+                    <tr>
+                      <td
+                        style="padding:0px 0px 0px 0px; line-height:24px; text-align:inherit;"
+                        height="100%" valign="top" bgcolor="" role="module-content">
+                        <div>
+                          <div style="font-family: inherit; text-align: left"><span
+                              style="white-space: pre-wrap;font-size: 14px;font-style: normal;font-weight: 600;color:#0D0D0D"><strong>Email</strong></span>
+                          </div>
+                          <div style="font-family: inherit; text-align: left;padding-bottom:8px"></div>
+                          <div style="font-family: inherit; text-align: left">
+                            <span style="white-space: pre-wrap;font-size: 14px;font-style: normal;color:#525252">{{ data.customer_info.email | default: '-' }}</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+{% comment %} <!-- Payment method --> {% endcomment %}
+<table class="module" role="module" data-type="text" border="0" cellpadding="0"
+  cellspacing="0" width="100%" style="table-layout: fixed;"
+  data-muid="676a1c91-0c6a-4466-afe0-615c8939776e" data-mc-module-version="2019-10-22">
+  <tbody>
+    <tr>
+      <td style="padding:0px 40px 32px 40px; line-height:24px; text-align:inherit;"
+        height="100%" valign="top" bgcolor="" role="module-content">
+        <div>
+          <div style="font-family: inherit; text-align: left">
+            <span style="white-space: pre-wrap; font-size: 16px;font-style: normal;font-weight: 600;color:#0D0D0D">Payment Method</span>
+          </div>
+          <div></div>
+        </div>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+{% comment %} <!-- Card type --> {% endcomment %}
+<table border="0" cellpadding="0" cellspacing="0" align="center" width="100%"
+  role="module" data-type="columns" style="padding:0px 40px 16px 40px;" bgcolor=""
+  data-distribution="1,1">
+  <tbody>
+    <tr role="module-content">
+      <td height="100%" valign="top">
+        <table width="250"
+          style="width:250px; border-spacing:0; border-collapse:collapse; margin:0px 16px 0px 0px;"
+          cellpadding="0" cellspacing="0" align="left" border="0" bgcolor=""
+          class="column column-0">
+          <tbody>
+            <tr>
+              <td style="padding:0px;margin:0px;border-spacing:0;">
+                <table class="module" role="module" data-type="text" border="0"
+                  cellpadding="0" cellspacing="0" width="100%"
+                  style="table-layout: fixed;"
+                  data-muid="4bcbeca9-ae9c-4737-97df-52f67a0529c9.2.1.1.4.2"
+                  data-mc-module-version="2019-10-22">
+                  <tbody>
+                    <tr>
+                      <td
+                        style="padding:0px 0px 0px 0px; line-height:24px; text-align:inherit;"
+                        height="100%" valign="top" bgcolor="" role="module-content">
+                        <div>
+                          <div style="font-family: inherit; text-align: left"><span
+                              style="white-space: pre-wrap;font-size: 14px;font-style: normal;font-weight: 600;color:#0D0D0D"><strong>Card Type</strong></span>
+                          </div>
+                          <div style="font-family: inherit; text-align: left;padding-bottom:8px"></div>
+                          <div style="font-family: inherit; text-align: left">
+                            <span style="white-space: pre-wrap;font-size: 14px;font-style: normal;color:#525252">{{ data.payment_response.payment_method_details.card.brand | upcase }}</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+{% comment %} <!-- Card Number --> {% endcomment %}
+<table border="0" cellpadding="0" cellspacing="0" align="center" width="100%"
+  role="module" data-type="columns" style="padding:0px 40px 40px 40px;" bgcolor=""
+  data-distribution="1,1">
+  <tbody>
+    <tr role="module-content">
+      <td height="100%" valign="top">
+        <table width="250"
+          style="width:250px; border-spacing:0; border-collapse:collapse; margin:0px 16px 0px 0px;"
+          cellpadding="0" cellspacing="0" align="left" border="0" bgcolor=""
+          class="column column-0">
+          <tbody>
+            <tr>
+              <td style="padding:0px;margin:0px;border-spacing:0;">
+                <table class="module" role="module" data-type="text" border="0"
+                  cellpadding="0" cellspacing="0" width="100%"
+                  style="table-layout: fixed;"
+                  data-muid="4bcbeca9-ae9c-4737-97df-52f67a0529c9.2.1.1.4.2"
+                  data-mc-module-version="2019-10-22">
+                  <tbody>
+                    <tr>
+                      <td
+                        style="padding:0px 0px 0px 0px; line-height:24px; text-align:inherit;"
+                        height="100%" valign="top" bgcolor="" role="module-content">
+                        <div>
+                          <div style="font-family: inherit; text-align: left"><span
+                              style="white-space: pre-wrap;font-size: 14px;font-style: normal;font-weight: 600;color:#0D0D0D"><strong>Card Number</strong></span>
+                          </div>
+                          <div style="font-family: inherit; text-align: left;padding-bottom:8px"></div>
+                          <div style="font-family: inherit; text-align: left">
+                            <span style="white-space: pre-wrap;font-size: 14px;font-style: normal;color:#525252"> **** **** **** {{ data.payment_response.payment_method_details.card.last4 }}</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+{% comment %} <!-- Payment Summary --> {% endcomment %}
+<table class="module" role="module" data-type="text" border="0" cellpadding="0"
+  cellspacing="0" width="100%" style="table-layout: fixed;"
+  data-muid="676a1c91-0c6a-4466-afe0-615c8939776e" data-mc-module-version="2019-10-22">
+  <tbody>
+    <tr>
+      <td style="padding:0px 40px 32px 40px; line-height:24px; text-align:inherit;"
+        height="100%" valign="top" bgcolor="" role="module-content">
+        <div>
+          <div style="font-family: inherit; text-align: left">
+            <span style="white-space: pre-wrap; font-size: 16px;font-style: normal;font-weight: 600;color:#0D0D0D">Payment Summary</span>
+          </div>
+          <div></div>
+        </div>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+{% comment %} <!-- Bill amount --> {% endcomment %}
+<table border="0" cellpadding="0" cellspacing="0" align="center" width="100%"
+  role="module" data-type="columns" style="padding:0px 40px 16px 40px;" bgcolor=""
+  data-distribution="1,1">
+  <tbody>
+    <tr role="module-content">
+      <td height="100%" valign="top">
+        <table width="250"
+          style="width:250px; border-spacing:0; border-collapse:collapse; margin:0px 16px 0px 0px;"
+          cellpadding="0" cellspacing="0" align="left" border="0" bgcolor=""
+          class="column column-0">
+          <tbody>
+            <tr>
+              <td style="padding:0px;margin:0px;border-spacing:0;">
+                <table class="module" role="module" data-type="text" border="0"
+                  cellpadding="0" cellspacing="0" width="100%"
+                  style="table-layout: fixed;"
+                  data-muid="4bcbeca9-ae9c-4737-97df-52f67a0529c9.2.1.1.4.2"
+                  data-mc-module-version="2019-10-22">
+                  <tbody>
+                    <tr>
+                      <td
+                        style="padding:0px 0px 0px 0px; line-height:24px; text-align:inherit;"
+                        height="100%" valign="top" bgcolor="" role="module-content">
+                        <div>
+                          <div style="font-family: inherit; text-align: left"><span
+                              style="white-space: pre-wrap;font-size: 14px;font-style: normal;font-weight: 600;color:#0D0D0D"><strong>Bill Amount</strong></span>
+                          </div>
+                          <div style="font-family: inherit; text-align: left;padding-bottom:8px"></div>
+                          <div style="font-family: inherit; text-align: left">
+                            <span style="white-space: pre-wrap;font-size: 14px;font-style: normal;color:#525252">{{ subTotal }}</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+{% comment %} <!-- Subtotal --> {% endcomment %}
+<table border="0" cellpadding="0" cellspacing="0" align="center" width="100%"
+  role="module" data-type="columns" style="padding:0px 40px 16px 40px;" bgcolor=""
+  data-distribution="1,1">
+  <tbody>
+    <tr role="module-content">
+      <td height="100%" valign="top">
+        <table width="250"
+          style="width:250px; border-spacing:0; border-collapse:collapse; margin:0px 16px 0px 0px;"
+          cellpadding="0" cellspacing="0" align="left" border="0" bgcolor=""
+          class="column column-0">
+          <tbody>
+            <tr>
+              <td style="padding:0px;margin:0px;border-spacing:0;">
+                <table class="module" role="module" data-type="text" border="0"
+                  cellpadding="0" cellspacing="0" width="100%"
+                  style="table-layout: fixed;"
+                  data-muid="4bcbeca9-ae9c-4737-97df-52f67a0529c9.2.1.1.4.2"
+                  data-mc-module-version="2019-10-22">
+                  <tbody>
+                    <tr>
+                      <td
+                        style="padding:0px 0px 0px 0px; line-height:24px; text-align:inherit;"
+                        height="100%" valign="top" bgcolor="" role="module-content">
+                        <div>
+                          <div style="font-family: inherit; text-align: left"><span
+                              style="white-space: pre-wrap;font-size: 14px;font-style: normal;font-weight: 600;color:#0D0D0D"><strong>Subtotal</strong></span>
+                          </div>
+                          <div style="font-family: inherit; text-align: left;padding-bottom:8px"></div>
+                          <div style="font-family: inherit; text-align: left">
+                            <span style="white-space: pre-wrap;font-size: 14px;font-style: normal;color:#525252">{{ subTotal }}</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+{% comment %} <!-- Tax --> {% endcomment %}
+<table border="0" cellpadding="0" cellspacing="0" align="center" width="100%"
+  role="module" data-type="columns" style="padding:0px 40px 16px 40px;" bgcolor=""
+  data-distribution="1,1">
+  <tbody>
+    <tr role="module-content">
+      <td height="100%" valign="top">
+        <table width="250"
+          style="width:250px; border-spacing:0; border-collapse:collapse; margin:0px 16px 0px 0px;"
+          cellpadding="0" cellspacing="0" align="left" border="0" bgcolor=""
+          class="column column-0">
+          <tbody>
+            <tr>
+              <td style="padding:0px;margin:0px;border-spacing:0;">
+                <table class="module" role="module" data-type="text" border="0"
+                  cellpadding="0" cellspacing="0" width="100%"
+                  style="table-layout: fixed;"
+                  data-muid="4bcbeca9-ae9c-4737-97df-52f67a0529c9.2.1.1.4.2"
+                  data-mc-module-version="2019-10-22">
+                  <tbody>
+                    <tr>
+                      <td
+                        style="padding:0px 0px 0px 0px; line-height:24px; text-align:inherit;"
+                        height="100%" valign="top" bgcolor="" role="module-content">
+                        <div>
+                          <div style="font-family: inherit; text-align: left"><span
+                              style="white-space: pre-wrap;font-size: 14px;font-style: normal;font-weight: 600;color:#0D0D0D"><strong>Tax</strong></span>
+                          </div>
+                          <div style="font-family: inherit; text-align: left;padding-bottom:8px"></div>
+                          <div style="font-family: inherit; text-align: left">
+                            <span style="white-space: pre-wrap;font-size: 14px;font-style: normal;color:#525252">{{ gst }}</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+{% comment %} <!-- Processing Fee --> {% endcomment %}
+<table border="0" cellpadding="0" cellspacing="0" align="center" width="100%"
+  role="module" data-type="columns" style="padding:0px 40px 16px 40px;" bgcolor=""
+  data-distribution="1,1">
+  <tbody>
+    <tr role="module-content">
+      <td height="100%" valign="top">
+        <table width="250"
+          style="width:250px; border-spacing:0; border-collapse:collapse; margin:0px 16px 0px 0px;"
+          cellpadding="0" cellspacing="0" align="left" border="0" bgcolor=""
+          class="column column-0">
+          <tbody>
+            <tr>
+              <td style="padding:0px;margin:0px;border-spacing:0;">
+                <table class="module" role="module" data-type="text" border="0"
+                  cellpadding="0" cellspacing="0" width="100%"
+                  style="table-layout: fixed;"
+                  data-muid="4bcbeca9-ae9c-4737-97df-52f67a0529c9.2.1.1.4.2"
+                  data-mc-module-version="2019-10-22">
+                  <tbody>
+                    <tr>
+                      <td
+                        style="padding:0px 0px 0px 0px; line-height:24px; text-align:inherit;"
+                        height="100%" valign="top" bgcolor="" role="module-content">
+                        <div>
+                          <div style="font-family: inherit; text-align: left"><span
+                              style="white-space: pre-wrap;font-size: 14px;font-style: normal;font-weight: 600;color:#0D0D0D"><strong>Processing Fee</strong></span>
+                          </div>
+                          <div style="font-family: inherit; text-align: left;padding-bottom:8px"></div>
+                          <div style="font-family: inherit; text-align: left">
+                            <span style="white-space: pre-wrap;font-size: 14px;font-style: normal;color:#525252">{{ ccSurcharge }}</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+{% comment %} <!-- Total --> {% endcomment %}
+<table border="0" cellpadding="0" cellspacing="0" align="center" width="100%"
+  role="module" data-type="columns" style="padding:0px 40px 32px 40px;" bgcolor=""
+  data-distribution="1,1">
+  <tbody>
+    <tr role="module-content">
+      <td height="100%" valign="top">
+        <table width="250"
+          style="width:250px; border-spacing:0; border-collapse:collapse; margin:0px 16px 0px 0px;"
+          cellpadding="0" cellspacing="0" align="left" border="0" bgcolor=""
+          class="column column-0">
+          <tbody>
+            <tr>
+              <td style="padding:0px;margin:0px;border-spacing:0;">
+                <table class="module" role="module" data-type="text" border="0"
+                  cellpadding="0" cellspacing="0" width="100%"
+                  style="table-layout: fixed;"
+                  data-muid="4bcbeca9-ae9c-4737-97df-52f67a0529c9.2.1.1.4.2"
+                  data-mc-module-version="2019-10-22">
+                  <tbody>
+                    <tr>
+                      <td
+                        style="padding:0px 0px 0px 0px; line-height:24px; text-align:inherit;"
+                        height="100%" valign="top" bgcolor="" role="module-content">
+                        <div>
+                          <div style="font-family: inherit; text-align: left"><span
+                              style="white-space: pre-wrap;font-size: 14px;font-style: normal;font-weight: 600;color:#0D0D0D"><strong>Total</strong></span>
+                          </div>
+                          <div style="font-family: inherit; text-align: left;padding-bottom:8px"></div>
+                          <div style="font-family: inherit; text-align: left">
+                            <span style="white-space: pre-wrap;font-size: 14px;font-style: normal;color:#525252">{{ totalAmount }}</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
