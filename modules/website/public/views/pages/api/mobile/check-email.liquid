@@ -1,0 +1,36 @@
+---
+slug: api/mobile/check-email
+format: json
+method: post
+searchable: false
+metadata: {
+    page_name: "API | Mobile | Check Email",
+}
+---
+{%- assign email = context.params.email | downcase | strip -%}
+
+{%- if email == blank -%}
+  {%- assign response = '{}' | parse_json -%}
+  {%- assign response = response | add_hash_key: "success", false -%}
+  {%- assign response = response | add_hash_key: "error", "Email is required." -%}
+  {{ response }}
+{%- else -%}
+  {%- graphql result = "modules/website/mobile/check_email", email: email -%}
+  {%- assign users = result | dig: "users" -%}
+
+  {%- if users.total_entries > 0 -%}
+    {%- comment -%} Email already registered {%- endcomment -%}
+    {%- assign response = '{}' | parse_json -%}
+    {%- assign response = response | add_hash_key: "success", true -%}
+    {%- assign response = response | add_hash_key: "available", false -%}
+    {%- assign response = response | add_hash_key: "message", "This email is already registered. Please log in." -%}
+    {{ response }}
+  {%- else -%}
+    {%- comment -%} Email is available {%- endcomment -%}
+    {%- assign response = '{}' | parse_json -%}
+    {%- assign response = response | add_hash_key: "success", true -%}
+    {%- assign response = response | add_hash_key: "available", true -%}
+    {%- assign response = response | add_hash_key: "message", "Email is available." -%}
+    {{ response }}
+  {%- endif -%}
+{%- endif -%}

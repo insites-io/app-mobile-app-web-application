@@ -1,0 +1,18 @@
+query check_email($email: String!) {
+  users(
+    per_page: 1
+    filter: {
+      deleted_at: { exists: false }
+      email: { value: $email }
+    }
+  ) {
+    total_entries
+    results {
+      id
+      email
+      profiles {
+        profile_type
+      }
+    }
+  }
+}
