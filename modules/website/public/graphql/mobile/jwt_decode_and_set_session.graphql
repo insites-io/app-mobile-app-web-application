@@ -1,0 +1,9 @@
+mutation jwt_decode_and_set_session($token: String!) {
+  jwt_decode_and_set_session(jwt_token: $token) {
+    id
+    email
+    first_name
+    last_name
+    external_id
+  }
+}

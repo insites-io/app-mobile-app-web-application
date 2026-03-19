@@ -1,0 +1,16 @@
+---
+slug: api/mobile/logout
+format: json
+method: post
+searchable: false
+metadata: {
+    page_name: "API | Mobile | Logout",
+}
+---
+{%- graphql result = "modules/portal/session/delete_current_session" -%}
+
+{%- assign response = '{}' | parse_json -%}
+{%- assign response = response | add_hash_key: "success", true -%}
+{%- assign response = response | add_hash_key: "message", "Logged out successfully." -%}
+
+{{ response }}
