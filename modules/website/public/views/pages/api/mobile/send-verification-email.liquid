@@ -1,0 +1,82 @@
+---
+slug: api/mobile/send-verification-email
+format: json
+method: post
+searchable: false
+metadata: {
+    page_name: "API | Mobile | Send Verification Email",
+}
+---
+{%- assign token = context.params.token -%}
+
+{%- if token == blank -%}
+  {%- assign response = '{}' | parse_json -%}
+  {%- assign response = response | add_hash_key: "success", false -%}
+  {%- assign response = response | add_hash_key: "error", "Token is required." -%}
+  {{ response }}
+{%- else -%}
+
+  {%- comment -%} ── Decode the JWT to get the user identity ── {%- endcomment -%}
+  {%- graphql session_result = "modules/website/mobile/jwt_decode_and_set_session", token: token -%}
+  {%- assign session_user = session_result.jwt_decode_and_set_session -%}
+
+  {%- if session_user == blank -%}
+    {%- assign response = '{}' | parse_json -%}
+    {%- assign response = response | add_hash_key: "success", false -%}
+    {%- assign response = response | add_hash_key: "error", "Invalid or expired token." -%}
+    {{ response }}
+  {%- else -%}
+
+    {%- comment -%} ── Get user data with portal profile ── {%- endcomment -%}
+    {%- graphql user_result = "modules/website/mobile/get_user_for_verification", email: session_user.email -%}
+    {%- assign user = user_result | dig: "users", "results" | first -%}
+
+    {%- if user == blank -%}
+      {%- assign response = '{}' | parse_json -%}
+      {%- assign response = response | add_hash_key: "success", false -%}
+      {%- assign response = response | add_hash_key: "error", "User not found." -%}
+      {{ response }}
+    {%- else -%}
+      {%- assign portal = user.profiles | first -%}
+
+      {%- if portal != blank and portal.is_verified == true -%}
+        {%- assign response = '{}' | parse_json -%}
+        {%- assign response = response | add_hash_key: "success", false -%}
+        {%- assign response = response | add_hash_key: "error", "Email is already verified." -%}
+        {{ response }}
+      {%- else -%}
+
+        {%- comment -%} ── Generate a fresh verification token ── {%- endcomment -%}
+        {%- graphql temporary_token = "modules/portal/account/generate_user_temporary_token", email: session_user.email -%}
+        {%- assign token_user = temporary_token | dig: "items", "results" | first -%}
+
+        {%- comment -%} ── Update the portal profile with the new token ── {%- endcomment -%}
+        {%- graphql update_profile = "modules/website/mobile/create_mobile_profile",
+            id: user.id,
+            verification_token: token_user.temporary_token,
+            is_verified: false -%}
+
+        {%- comment -%} ── Send the verification email ── {%- endcomment -%}
+        {%- assign template_name = "modules/portal/mobile_email_verification" -%}
+
+        {% parse_json email_data %}
+        {
+            "email": "{{ session_user.email }}",
+            "first_name": "{{ user.first_name }}",
+            "verification_token": "{{ token_user.temporary_token }}"
+        }
+        {% endparse_json %}
+
+        {%- graphql trigger = "modules/website/trigger_email_notification",
+            name: template_name,
+            data: email_data -%}
+
+        {%- assign response = '{}' | parse_json -%}
+        {%- assign response = response | add_hash_key: "success", true -%}
+        {%- assign response = response | add_hash_key: "message", "Verification email sent." -%}
+        {{ response }}
+
+      {%- endif -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endif -%}

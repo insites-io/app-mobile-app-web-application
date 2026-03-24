@@ -1,0 +1,118 @@
+---
+slug: api/mobile/verify-email
+format: html
+method: get
+searchable: false
+metadata: {
+    page_name: "API | Mobile | Verify Email",
+}
+---
+{%- assign token = context.params.token -%}
+{%- assign email_encoded = context.params.email -%}
+{%- assign email = email_encoded | base64_url_safe_decode -%}
+
+{%- if token == blank or email == blank -%}
+  {%- assign status = "error" -%}
+  {%- assign message = "Invalid verification link." -%}
+{%- else -%}
+
+  {%- comment -%} ── Look up the user and their portal profile ── {%- endcomment -%}
+  {%- graphql user_result = "modules/website/mobile/get_user_for_verification", email: email -%}
+  {%- assign user = user_result | dig: "users", "results" | first -%}
+
+  {%- if user == blank -%}
+    {%- assign status = "error" -%}
+    {%- assign message = "User not found." -%}
+  {%- else -%}
+    {%- assign portal = user.profiles | first -%}
+
+    {%- if portal == blank -%}
+      {%- assign status = "error" -%}
+      {%- assign message = "No verification profile found." -%}
+    {%- elsif portal.is_verified == true -%}
+      {%- assign status = "already_verified" -%}
+      {%- assign message = "Your email has already been verified." -%}
+    {%- elsif portal.verification_token != token -%}
+      {%- assign status = "error" -%}
+      {%- assign message = "Invalid or expired verification link." -%}
+    {%- else -%}
+      {%- comment -%} ── Token matches — set is_verified to true ── {%- endcomment -%}
+      {%- graphql verify = "modules/website/mobile/update_is_verified",
+          id: user.id,
+          is_verified: true -%}
+
+      {%- assign status = "success" -%}
+      {%- assign message = "Your email has been verified successfully!" -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endif -%}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Verification - Insites</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #F5F5F5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 48px 32px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 32px;
+    }
+    .icon.success { background-color: #E8F5E9; }
+    .icon.error { background-color: #FFEBEE; }
+    .icon.info { background-color: #E3F2FD; }
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #0D0D0D;
+      margin-bottom: 12px;
+    }
+    p {
+      font-size: 16px;
+      color: #525252;
+      line-height: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    {%- if status == "success" -%}
+      <div class="icon success">&#10003;</div>
+      <h1>Email Verified</h1>
+    {%- elsif status == "already_verified" -%}
+      <div class="icon info">&#10003;</div>
+      <h1>Already Verified</h1>
+    {%- else -%}
+      <div class="icon error">&#10007;</div>
+      <h1>Verification Failed</h1>
+    {%- endif -%}
+    <p>{{ message }}</p>
+  </div>
+</body>
+</html>

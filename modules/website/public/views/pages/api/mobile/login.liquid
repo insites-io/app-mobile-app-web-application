@@ -37,11 +37,25 @@ metadata: {
       {%- assign response = response | add_hash_key: "error", "Invalid email or password." -%}
       {{ response }}
     {%- else -%}
+      {%- comment -%} Check if non-admin user has verified their email {%- endcomment -%}
+      {%- assign portal = user.portal | first -%}
+      {%- assign is_admin = false -%}
+      {%- if portal != blank and portal.permission_level != blank -%}
+        {%- assign is_admin = true -%}
+      {%- endif -%}
+
+      {%- if is_admin == false and portal != blank and portal.is_verified != true -%}
+        {%- assign response = '{}' | parse_json -%}
+        {%- assign response = response | add_hash_key: "success", false -%}
+        {%- assign response = response | add_hash_key: "error", "Please verify your email address before logging in." -%}
+        {%- assign response = response | add_hash_key: "error_code", "email_not_verified" -%}
+        {{ response }}
+      {%- else -%}
+
       {%- comment -%} Sign in the user to establish a server-side session {%- endcomment -%}
       {%- sign_in user_id: user.id, timeout_in_minutes: 10080 -%}
 
       {%- comment -%} Build the success response with JWT and user data {%- endcomment -%}
-      {%- assign portal = user.portal | first -%}
       {%- assign crm = user.crm_contact | first -%}
       {%- assign company = crm.company -%}
 
@@ -74,6 +88,8 @@ metadata: {
       {%- assign response = response | add_hash_key: "token", user.jwt_token -%}
       {%- assign response = response | add_hash_key: "user", user_data -%}
       {{ response }}
+
+      {%- endif -%}
     {%- endif -%}
   {%- endif -%}
 {%- endif -%}

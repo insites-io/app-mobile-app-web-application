@@ -51,11 +51,16 @@ metadata: {
       {%- comment -%} ── Step 4: Sign in the new user ── {%- endcomment -%}
       {%- sign_in user_id: new_user.id, timeout_in_minutes: 10080 -%}
 
-      {%- comment -%} ── Step 5: Build success response ── {%- endcomment -%}
-      {%- comment -%} Note: No portal profile or CRM contact created here.
-         Mobile signup creates a basic user account only.
-         The IIA (Insites Instance Admin) promotes users to administrators
-         via the admin panel when needed. {%- endcomment -%}
+      {%- comment -%} ── Step 5: Create portal profile with verification token (is_verified=false) ── {%- endcomment -%}
+      {%- graphql temporary_token = "modules/portal/account/generate_user_temporary_token", email: email -%}
+      {%- assign token_user = temporary_token | dig: "items", "results" | first -%}
+
+      {%- graphql create_profile = "modules/website/mobile/create_mobile_profile",
+          id: token_user.id,
+          verification_token: token_user.temporary_token,
+          is_verified: false -%}
+
+      {%- comment -%} ── Step 6: Build success response ── {%- endcomment -%}
       {%- assign user_data = '{}' | parse_json -%}
       {%- assign user_data = user_data | add_hash_key: "id", new_user.id -%}
       {%- assign user_data = user_data | add_hash_key: "email", new_user.email -%}

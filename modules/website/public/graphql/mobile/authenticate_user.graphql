@@ -22,8 +22,10 @@ query authenticate_user($email: String!, $password: String!) {
       portal: profiles(profile_type: "modules/portal/portal") {
         is_enabled: property_boolean(name: "is_enabled")
         is_activated: property_boolean(name: "is_activated")
+        is_verified: property_boolean(name: "is_verified")
         primary_account_holder: property_boolean(name: "primary_account_holder")
         permission_level: property(name: "permission_level")
+        verification_token: property(name: "verification_token")
       }
 
       crm_contact: profiles(profile_type: "modules/insites_core/crm_contact") {
