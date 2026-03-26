@@ -41,3 +41,9 @@ properties:
     options: []
 - name: verification_token
   type: string
+- name: profile_picture_url
+  type: string
+  metadata:
+    type: "string"
+    label: "Profile Picture URL"
+    weight: 1

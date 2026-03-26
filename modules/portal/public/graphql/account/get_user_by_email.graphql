@@ -30,6 +30,9 @@ query get_user_by_email (
       ) {
         is_enabled: property_boolean(name: "is_enabled")
         is_activated: property_boolean(name: "is_activated")
+        permission_level: property(name: "permission_level")
+        primary_account_holder: property_boolean(name: "primary_account_holder")
+        profile_picture_url: property(name: "profile_picture_url")
       }
 
       ## CRM

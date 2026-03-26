@@ -39,12 +39,16 @@ metadata: {
     {%- else -%}
       {%- comment -%} Check if non-admin user has verified their email {%- endcomment -%}
       {%- assign portal = user.portal | first -%}
+      {%- assign crm = user.crm_contact | first -%}
       {%- assign is_admin = false -%}
       {%- if portal != blank and portal.permission_level != blank -%}
         {%- assign is_admin = true -%}
       {%- endif -%}
+      {%- if crm != blank -%}
+        {%- assign is_admin = true -%}
+      {%- endif -%}
 
-      {%- if is_admin == false and portal != blank and portal.is_verified != true -%}
+      {%- if is_admin == false and portal != blank and portal.is_verified == false -%}
         {%- assign response = '{}' | parse_json -%}
         {%- assign response = response | add_hash_key: "success", false -%}
         {%- assign response = response | add_hash_key: "error", "Please verify your email address before logging in." -%}

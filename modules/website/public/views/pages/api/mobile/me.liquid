@@ -49,6 +49,7 @@ metadata: {
       {%- if portal != blank -%}
         {%- assign user_data = user_data | add_hash_key: "permission_level", portal.permission_level -%}
         {%- assign user_data = user_data | add_hash_key: "primary_account_holder", portal.primary_account_holder -%}
+        {%- assign user_data = user_data | add_hash_key: "profile_picture_url", portal.profile_picture_url -%}
       {%- endif -%}
 
       {%- if crm != blank -%}

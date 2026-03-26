@@ -1,0 +1,111 @@
+---
+slug: api/mobile/update-profile
+format: json
+method: post
+searchable: false
+metadata: {
+    page_name: "API | Mobile | Update Profile",
+}
+---
+{%- assign token = context.params.token -%}
+{%- assign first_name = context.params.first_name -%}
+{%- assign last_name = context.params.last_name -%}
+{%- assign email = context.params.email -%}
+{%- assign profile_picture_url = context.params.profile_picture_url -%}
+
+{%- comment -%} ── Step 1: Validate token ── {%- endcomment -%}
+{%- if token == blank -%}
+  {%- assign response = '{}' | parse_json -%}
+  {%- assign response = response | add_hash_key: "success", false -%}
+  {%- assign response = response | add_hash_key: "error", "Token is required." -%}
+  {{ response }}
+{%- else -%}
+
+  {%- comment -%} ── Step 2: Decode JWT to get user identity ── {%- endcomment -%}
+  {%- graphql session_result = "modules/website/mobile/jwt_decode_and_set_session", token: token -%}
+  {%- assign session_user = session_result.jwt_decode_and_set_session -%}
+
+  {%- if session_user == blank -%}
+    {%- assign response = '{}' | parse_json -%}
+    {%- assign response = response | add_hash_key: "success", false -%}
+    {%- assign response = response | add_hash_key: "error", "Invalid or expired token." -%}
+    {{ response }}
+  {%- else -%}
+
+    {%- comment -%} ── Step 3: Check at least one field is provided ── {%- endcomment -%}
+    {%- if first_name == blank and last_name == blank and email == blank and profile_picture_url == blank -%}
+      {%- assign response = '{}' | parse_json -%}
+      {%- assign response = response | add_hash_key: "success", false -%}
+      {%- assign response = response | add_hash_key: "error", "At least one field to update is required." -%}
+      {{ response }}
+    {%- else -%}
+
+      {%- comment -%} ── Step 4: Use current values for fields not provided ── {%- endcomment -%}
+      {%- graphql current_data = "modules/portal/account/get_user_by_email", email: session_user.email -%}
+      {%- assign current_user = current_data | dig: "items", "results" | first -%}
+      {%- assign current_portal = current_user.portal | first -%}
+
+      {%- if first_name == blank -%}
+        {%- assign first_name = current_user.first_name -%}
+      {%- endif -%}
+      {%- if last_name == blank -%}
+        {%- assign last_name = current_user.last_name -%}
+      {%- endif -%}
+      {%- if email == blank -%}
+        {%- assign email = current_user.email -%}
+      {%- endif -%}
+      {%- if profile_picture_url == blank -%}
+        {%- assign profile_picture_url = current_portal.profile_picture_url -%}
+      {%- endif -%}
+
+      {%- comment -%} ── Step 5: If email is changing, check it's not taken ── {%- endcomment -%}
+      {%- assign email = email | downcase | strip -%}
+      {%- assign email_changed = false -%}
+      {%- if email != session_user.email -%}
+        {%- assign email_changed = true -%}
+        {%- graphql email_check = "modules/website/mobile/check_email", email: email -%}
+        {%- assign existing_users = email_check | dig: "users", "total_entries" -%}
+      {%- endif -%}
+
+      {%- if email_changed and existing_users > 0 -%}
+        {%- assign response = '{}' | parse_json -%}
+        {%- assign response = response | add_hash_key: "success", false -%}
+        {%- assign response = response | add_hash_key: "error", "This email is already in use." -%}
+        {{ response }}
+      {%- else -%}
+
+        {%- comment -%} ── Step 6: Update user profile ── {%- endcomment -%}
+        {%- graphql update_result = "modules/website/mobile/update_user_profile",
+            id: session_user.id,
+            first_name: first_name,
+            last_name: last_name,
+            email: email,
+            profile_picture_url: profile_picture_url -%}
+        {%- assign updated_user = update_result.user_update -%}
+
+        {%- if updated_user == blank -%}
+          {%- assign response = '{}' | parse_json -%}
+          {%- assign response = response | add_hash_key: "success", false -%}
+          {%- assign response = response | add_hash_key: "error", "Failed to update profile. Please try again." -%}
+          {{ response }}
+        {%- else -%}
+
+          {%- comment -%} ── Step 7: Build success response with updated data ── {%- endcomment -%}
+          {%- assign user_data = '{}' | parse_json -%}
+          {%- assign user_data = user_data | add_hash_key: "id", updated_user.id -%}
+          {%- assign user_data = user_data | add_hash_key: "email", updated_user.email -%}
+          {%- assign user_data = user_data | add_hash_key: "first_name", updated_user.first_name -%}
+          {%- assign user_data = user_data | add_hash_key: "last_name", updated_user.last_name -%}
+          {%- assign user_data = user_data | add_hash_key: "external_id", updated_user.external_id -%}
+          {%- assign user_data = user_data | add_hash_key: "profile_picture_url", profile_picture_url -%}
+
+          {%- assign response = '{}' | parse_json -%}
+          {%- assign response = response | add_hash_key: "success", true -%}
+          {%- assign response = response | add_hash_key: "user", user_data -%}
+          {{ response }}
+
+        {%- endif -%}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endif -%}
