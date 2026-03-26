@@ -53,6 +53,7 @@ metadata: {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Email Verification - Insites</title>
+  <link rel="stylesheet" href="https://components.insites.io/v2/latest/css/insites-font-icons.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -75,18 +76,13 @@ metadata: {
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
     .icon {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       margin: 0 auto 24px;
-      font-size: 32px;
+      font-size: 64px;
+      line-height: 1;
     }
-    .icon.success { background-color: #E8F5E9; }
-    .icon.error { background-color: #FFEBEE; }
-    .icon.info { background-color: #E3F2FD; }
+    .icon.success { color: #4CAF50; }
+    .icon.error { color: #F44336; }
+    .icon.info { color: #4CAF50; }
     h1 {
       font-size: 24px;
       font-weight: 600;
@@ -103,13 +99,13 @@ metadata: {
 <body>
   <div class="card">
     {%- if status == "success" -%}
-      <div class="icon success">&#10003;</div>
+      <div class="icon success"><i class="icon-check-circle-1"></i></div>
       <h1>Email Verified</h1>
     {%- elsif status == "already_verified" -%}
-      <div class="icon info">&#10003;</div>
+      <div class="icon info"><i class="icon-check-circle-1"></i></div>
       <h1>Already Verified</h1>
     {%- else -%}
-      <div class="icon error">&#10007;</div>
+      <div class="icon error"><i class="icon-close-1"></i></div>
       <h1>Verification Failed</h1>
     {%- endif -%}
     <p>{{ message }}</p>
