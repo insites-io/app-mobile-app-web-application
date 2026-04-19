@@ -1,0 +1,75 @@
+---
+slug: api/mobile/app-redirect
+format: html
+method: get
+searchable: false
+metadata: {
+    page_name: "API | Mobile | App Redirect",
+}
+---
+{%- assign type = context.params.type -%}
+{%- assign token = context.params.token -%}
+{%- assign email = context.params.email -%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insites Mobile App</title>
+  <link rel="stylesheet" href="https://components.insites.io/v2/latest/css/insites-font-icons.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #F5F5F5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 48px 32px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .icon {
+      margin: 0 auto 24px;
+      font-size: 64px;
+      line-height: 1;
+      color: #3044FF;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #0D0D0D;
+      margin-bottom: 12px;
+    }
+    p {
+      font-size: 16px;
+      color: #525252;
+      line-height: 24px;
+      margin-bottom: 16px;
+    }
+    .hint {
+      font-size: 14px;
+      color: #8A8A8A;
+      line-height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon"><i class="icon-smartphone"></i></div>
+    <h1>Open in Insites App</h1>
+    <p>This link is designed to open in the Insites mobile app.</p>
+    <p>If the app did not open automatically, please open this link on your mobile device with the Insites app installed.</p>
+    <p class="hint">If you don't have the app installed, please download it from the App Store or Google Play.</p>
+  </div>
+</body>
+</html>
