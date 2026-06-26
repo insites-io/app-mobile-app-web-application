@@ -60,7 +60,6 @@ metadata: {
       {%- sign_in user_id: user.id, timeout_in_minutes: 10080 -%}
 
       {%- comment -%} Build the success response with JWT and user data {%- endcomment -%}
-      {%- assign crm = user.crm_contact | first -%}
       {%- assign company = crm.company -%}
 
       {%- assign user_data = '{}' | parse_json -%}
