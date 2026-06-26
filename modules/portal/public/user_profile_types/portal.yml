@@ -32,5 +32,18 @@ properties:
     label: "Primary account holder"
     weight: 1
     options: []
+- name: is_verified
+  type: boolean
+  metadata:
+    type: "toggle"
+    label: "Is Verified"
+    weight: 1
+    options: []
 - name: verification_token
   type: string
+- name: profile_picture_url
+  type: string
+  metadata:
+    type: "string"
+    label: "Profile Picture URL"
+    weight: 1
