@@ -1,0 +1,44 @@
+---
+slug: api/mobile/validate-token
+format: json
+method: post
+searchable: false
+metadata: {
+    page_name: "API | Mobile | Validate Token",
+}
+---
+{%- assign email = context.params.email | downcase | strip -%}
+{%- assign jwt = context.params.token -%}
+
+{%- if email == blank or jwt == blank -%}
+  {%- assign response = '{}' | parse_json -%}
+  {%- assign response = response | add_hash_key: "success", false -%}
+  {%- assign response = response | add_hash_key: "error", "Email and token are required." -%}
+  {{ response }}
+{%- else -%}
+  {%- graphql result = "modules/website/mobile/get_user_by_jwt", email: email, jwt: jwt -%}
+  {%- assign user = result | dig: "users", "results" | first -%}
+
+  {%- if user == blank -%}
+    {%- assign response = '{}' | parse_json -%}
+    {%- assign response = response | add_hash_key: "success", false -%}
+    {%- assign response = response | add_hash_key: "error", "Invalid token." -%}
+    {{ response }}
+  {%- else -%}
+    {%- assign auth_result = user.authenticate.jwt -%}
+
+    {%- if auth_result != true -%}
+      {%- assign response = '{}' | parse_json -%}
+      {%- assign response = response | add_hash_key: "success", false -%}
+      {%- assign response = response | add_hash_key: "error", "Token expired or invalid." -%}
+      {{ response }}
+    {%- else -%}
+      {%- assign response = '{}' | parse_json -%}
+      {%- assign response = response | add_hash_key: "success", true -%}
+      {%- assign response = response | add_hash_key: "valid", true -%}
+      {%- assign response = response | add_hash_key: "user_id", user.id -%}
+      {%- assign response = response | add_hash_key: "email", user.email -%}
+      {{ response }}
+    {%- endif -%}
+  {%- endif -%}
+{%- endif -%}

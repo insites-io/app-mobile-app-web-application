@@ -1,0 +1,72 @@
+---
+slug: api/mobile/me
+format: json
+method: post
+searchable: false
+metadata: {
+    page_name: "API | Mobile | Current User",
+}
+---
+{%- assign token = context.params.token -%}
+
+{%- if token == blank -%}
+  {%- assign response = '{}' | parse_json -%}
+  {%- assign response = response | add_hash_key: "success", false -%}
+  {%- assign response = response | add_hash_key: "error", "Token is required." -%}
+  {{ response }}
+{%- else -%}
+  {%- comment -%} Decode the JWT to get the user identity {%- endcomment -%}
+  {%- graphql session_result = "modules/website/mobile/jwt_decode_and_set_session", token: token -%}
+  {%- assign session_user = session_result.jwt_decode_and_set_session -%}
+
+  {%- if session_user == blank -%}
+    {%- assign response = '{}' | parse_json -%}
+    {%- assign response = response | add_hash_key: "success", false -%}
+    {%- assign response = response | add_hash_key: "error", "Invalid or expired token." -%}
+    {{ response }}
+  {%- else -%}
+    {%- comment -%} Fetch full user data with profiles using the decoded email {%- endcomment -%}
+    {%- graphql data = "modules/portal/account/get_user_by_email", email: session_user.email -%}
+    {%- assign user = data | dig: "items", "results" | first -%}
+
+    {%- if user == blank -%}
+      {%- assign response = '{}' | parse_json -%}
+      {%- assign response = response | add_hash_key: "success", false -%}
+      {%- assign response = response | add_hash_key: "error", "User not found." -%}
+      {{ response }}
+    {%- else -%}
+      {%- assign portal = user.portal | first -%}
+      {%- assign crm = user.crm_contact | first -%}
+      {%- assign company = crm.company -%}
+
+      {%- assign user_data = '{}' | parse_json -%}
+      {%- assign user_data = user_data | add_hash_key: "id", user.id -%}
+      {%- assign user_data = user_data | add_hash_key: "email", user.email -%}
+      {%- assign user_data = user_data | add_hash_key: "first_name", user.first_name -%}
+      {%- assign user_data = user_data | add_hash_key: "last_name", user.last_name -%}
+      {%- assign user_data = user_data | add_hash_key: "external_id", user.uuid -%}
+
+      {%- if portal != blank -%}
+        {%- assign user_data = user_data | add_hash_key: "permission_level", portal.permission_level -%}
+        {%- assign user_data = user_data | add_hash_key: "primary_account_holder", portal.primary_account_holder -%}
+        {%- assign user_data = user_data | add_hash_key: "profile_picture_url", portal.profile_picture_url -%}
+      {%- endif -%}
+
+      {%- if crm != blank -%}
+        {%- assign contact_data = '{}' | parse_json -%}
+        {%- assign contact_data = contact_data | add_hash_key: "company_uuid", crm.company_uuid -%}
+        {%- assign contact_data = contact_data | add_hash_key: "mobile_phone_number", crm.mobile_phone_number -%}
+        {%- assign contact_data = contact_data | add_hash_key: "mobile_phone_country_code", crm.mobile_phone_country_code -%}
+        {%- if company != blank -%}
+          {%- assign contact_data = contact_data | add_hash_key: "company_name", company.company_name -%}
+        {%- endif -%}
+        {%- assign user_data = user_data | add_hash_key: "contact", contact_data -%}
+      {%- endif -%}
+
+      {%- assign response = '{}' | parse_json -%}
+      {%- assign response = response | add_hash_key: "success", true -%}
+      {%- assign response = response | add_hash_key: "user", user_data -%}
+      {{ response }}
+    {%- endif -%}
+  {%- endif -%}
+{%- endif -%}

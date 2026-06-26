@@ -1,0 +1,98 @@
+---
+slug: api/mobile/login
+format: json
+method: post
+searchable: false
+metadata: {
+    page_name: "API | Mobile | Login",
+}
+---
+{%- assign email = context.params.email | downcase | strip -%}
+{%- assign password = context.params.password -%}
+
+{%- if email == blank or password == blank -%}
+  {%- comment -%} Validate required fields {%- endcomment -%}
+  {%- assign response = '{}' | parse_json -%}
+  {%- assign response = response | add_hash_key: "success", false -%}
+  {%- assign response = response | add_hash_key: "error", "Email and password are required." -%}
+  {{ response }}
+{%- else -%}
+  {%- comment -%} Authenticate user with email and password {%- endcomment -%}
+  {%- graphql result = "modules/website/mobile/authenticate_user", email: email, password: password -%}
+  {%- assign user = result | dig: "users", "results" | first -%}
+
+  {%- if user == blank -%}
+    {%- comment -%} No user found with this email {%- endcomment -%}
+    {%- assign response = '{}' | parse_json -%}
+    {%- assign response = response | add_hash_key: "success", false -%}
+    {%- assign response = response | add_hash_key: "error", "Invalid email or password." -%}
+    {{ response }}
+  {%- else -%}
+    {%- assign auth_result = user.authenticate.password -%}
+
+    {%- if auth_result != true -%}
+      {%- comment -%} Password authentication failed {%- endcomment -%}
+      {%- assign response = '{}' | parse_json -%}
+      {%- assign response = response | add_hash_key: "success", false -%}
+      {%- assign response = response | add_hash_key: "error", "Invalid email or password." -%}
+      {{ response }}
+    {%- else -%}
+      {%- comment -%} Check if non-admin user has verified their email {%- endcomment -%}
+      {%- assign portal = user.portal | first -%}
+      {%- assign crm = user.crm_contact | first -%}
+      {%- assign is_admin = false -%}
+      {%- if portal != blank and portal.permission_level != blank -%}
+        {%- assign is_admin = true -%}
+      {%- endif -%}
+      {%- if crm != blank -%}
+        {%- assign is_admin = true -%}
+      {%- endif -%}
+
+      {%- if is_admin == false and portal != blank and portal.is_verified == false -%}
+        {%- assign response = '{}' | parse_json -%}
+        {%- assign response = response | add_hash_key: "success", false -%}
+        {%- assign response = response | add_hash_key: "error", "Please verify your email address before logging in." -%}
+        {%- assign response = response | add_hash_key: "error_code", "email_not_verified" -%}
+        {{ response }}
+      {%- else -%}
+
+      {%- comment -%} Sign in the user to establish a server-side session {%- endcomment -%}
+      {%- sign_in user_id: user.id, timeout_in_minutes: 10080 -%}
+
+      {%- comment -%} Build the success response with JWT and user data {%- endcomment -%}
+      {%- assign company = crm.company -%}
+
+      {%- assign user_data = '{}' | parse_json -%}
+      {%- assign user_data = user_data | add_hash_key: "id", user.id -%}
+      {%- assign user_data = user_data | add_hash_key: "email", user.email -%}
+      {%- assign user_data = user_data | add_hash_key: "first_name", user.first_name -%}
+      {%- assign user_data = user_data | add_hash_key: "last_name", user.last_name -%}
+      {%- assign user_data = user_data | add_hash_key: "external_id", user.external_id -%}
+
+      {%- if portal != blank -%}
+        {%- assign user_data = user_data | add_hash_key: "permission_level", portal.permission_level -%}
+        {%- assign user_data = user_data | add_hash_key: "primary_account_holder", portal.primary_account_holder -%}
+      {%- endif -%}
+
+      {%- if crm != blank -%}
+        {%- assign contact_data = '{}' | parse_json -%}
+        {%- assign contact_data = contact_data | add_hash_key: "id", crm.id -%}
+        {%- assign contact_data = contact_data | add_hash_key: "company_uuid", crm.company_uuid -%}
+        {%- assign contact_data = contact_data | add_hash_key: "mobile_phone_number", crm.mobile_phone_number -%}
+        {%- assign contact_data = contact_data | add_hash_key: "mobile_phone_country_code", crm.mobile_phone_country_code -%}
+        {%- if company != blank -%}
+          {%- assign contact_data = contact_data | add_hash_key: "company_name", company.company_name -%}
+        {%- endif -%}
+        {%- assign user_data = user_data | add_hash_key: "contact", contact_data -%}
+      {%- endif -%}
+
+      {%- assign response = '{}' | parse_json -%}
+      {%- assign response = response | add_hash_key: "success", true -%}
+      {%- assign response = response | add_hash_key: "token", user.jwt_token -%}
+      {%- assign response = response | add_hash_key: "user", user_data -%}
+      {{ response }}
+
+      {%- endif -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endif -%}

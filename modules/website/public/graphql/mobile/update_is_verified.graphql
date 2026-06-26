@@ -1,0 +1,19 @@
+mutation update_is_verified($id: ID!, $is_verified: Boolean!) {
+  user_update(
+    id: $id
+    user: {
+      profiles: [
+        {
+          name: "modules/portal/portal",
+          values: {
+            properties: [
+              { name: "is_verified", value_boolean: $is_verified }
+            ]
+          }
+        }
+      ]
+    }
+  ) {
+    id
+  }
+}

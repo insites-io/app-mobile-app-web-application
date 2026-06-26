@@ -1,0 +1,79 @@
+---
+slug: api/mobile/signup
+format: json
+method: post
+searchable: false
+metadata: {
+    page_name: "API | Mobile | Signup",
+}
+---
+{%- assign email = context.params.email | downcase | strip -%}
+{%- assign password = context.params.password -%}
+{%- assign first_name = context.params.first_name | strip -%}
+{%- assign last_name = context.params.last_name | strip -%}
+
+{%- comment -%} ── Step 1: Validate required fields ── {%- endcomment -%}
+{%- if email == blank or password == blank or first_name == blank or last_name == blank -%}
+  {%- assign response = '{}' | parse_json -%}
+  {%- assign response = response | add_hash_key: "success", false -%}
+  {%- assign response = response | add_hash_key: "error", "Email, password, first name, and last name are required." -%}
+  {{ response }}
+{%- else -%}
+
+  {%- comment -%} ── Step 2: Check if email is already taken ── {%- endcomment -%}
+  {%- graphql email_check = "modules/website/mobile/check_email", email: email -%}
+  {%- assign existing_users = email_check | dig: "users", "total_entries" -%}
+
+  {%- if existing_users > 0 -%}
+    {%- assign response = '{}' | parse_json -%}
+    {%- assign response = response | add_hash_key: "success", false -%}
+    {%- assign response = response | add_hash_key: "error", "This email is already registered. Please log in." -%}
+    {{ response }}
+  {%- else -%}
+
+    {%- comment -%} ── Step 3: Create the user ── {%- endcomment -%}
+    {%- assign uuid = '' | generate_uuid -%}
+    {%- graphql create_result = "modules/website/mobile/create_user",
+        email: email,
+        password: password,
+        first_name: first_name,
+        last_name: last_name,
+        external_id: uuid -%}
+    {%- assign new_user = create_result.user_create -%}
+
+    {%- if new_user == blank -%}
+      {%- assign response = '{}' | parse_json -%}
+      {%- assign response = response | add_hash_key: "success", false -%}
+      {%- assign response = response | add_hash_key: "error", "Failed to create user account. Please try again." -%}
+      {{ response }}
+    {%- else -%}
+
+      {%- comment -%} ── Step 4: Sign in the new user ── {%- endcomment -%}
+      {%- sign_in user_id: new_user.id, timeout_in_minutes: 10080 -%}
+
+      {%- comment -%} ── Step 5: Create portal profile with verification token (is_verified=false) ── {%- endcomment -%}
+      {%- graphql temporary_token = "modules/portal/account/generate_user_temporary_token", email: email -%}
+      {%- assign token_user = temporary_token | dig: "items", "results" | first -%}
+
+      {%- graphql create_profile = "modules/website/mobile/create_mobile_profile",
+          id: token_user.id,
+          verification_token: token_user.temporary_token,
+          is_verified: false -%}
+
+      {%- comment -%} ── Step 6: Build success response ── {%- endcomment -%}
+      {%- assign user_data = '{}' | parse_json -%}
+      {%- assign user_data = user_data | add_hash_key: "id", new_user.id -%}
+      {%- assign user_data = user_data | add_hash_key: "email", new_user.email -%}
+      {%- assign user_data = user_data | add_hash_key: "first_name", new_user.first_name -%}
+      {%- assign user_data = user_data | add_hash_key: "last_name", new_user.last_name -%}
+      {%- assign user_data = user_data | add_hash_key: "external_id", new_user.external_id -%}
+
+      {%- assign response = '{}' | parse_json -%}
+      {%- assign response = response | add_hash_key: "success", true -%}
+      {%- assign response = response | add_hash_key: "token", new_user.jwt_token -%}
+      {%- assign response = response | add_hash_key: "user", user_data -%}
+      {{ response }}
+
+    {%- endif -%}
+  {%- endif -%}
+{%- endif -%}

@@ -1,0 +1,19 @@
+query get_user_for_verification($email: String!) {
+  users(
+    per_page: 1
+    filter: {
+      email: { value: $email }
+      deleted_at: { exists: false }
+    }
+  ) {
+    results {
+      id
+      email
+      first_name
+      profiles(profile_type: "modules/portal/portal") {
+        is_verified: property_boolean(name: "is_verified")
+        verification_token: property(name: "verification_token")
+      }
+    }
+  }
+}
